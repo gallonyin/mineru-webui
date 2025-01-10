@@ -89,7 +89,7 @@ async def upload_pdf(file: UploadFile):
             buffer.write(content)
         
         # 生成任务ID
-        task_id = str(uuid.uuid4())
+        task_id = str(uuid.uuid4()).replace("-", "")
         
         # 启动异步任务
         asyncio.create_task(
@@ -124,12 +124,24 @@ async def get_task_status(task_id: str):
         raise HTTPException(status_code=404, detail="任务不存在")
     
     result = TASK_STATUS[task_id]
+    markdown_content = None
+    
+    if result["status"] == "completed":
+        markdown_path = result.get("output_files", {}).get("markdown")
+        if markdown_path and os.path.exists(markdown_path):
+            try:
+                with open(markdown_path, 'r', encoding='utf-8') as f:
+                    markdown_content = f.read()
+            except Exception as e:
+                print(f"读取markdown文件失败: {str(e)}")
+    
     return {
         "task_id": task_id,
         "status": result["status"],
-        "result": result.get("output_files") if result["status"] == "completed" else result.get("error")
+        "result": result.get("output_files") if result["status"] == "completed" else result.get("error"),
+        "markdown": markdown_content
     }
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=18049)
